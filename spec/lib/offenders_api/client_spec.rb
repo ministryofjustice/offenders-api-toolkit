@@ -172,7 +172,7 @@ RSpec.describe OffendersApi::Client do
         created_at: Time.now.utc.to_i
       }.to_json
     }
-    let(:http_status) { 200 }
+    let(:authorization_http_status) { 200 }
     let(:get_uri) { "#{base_url}/api/offenders/search" }
     let(:get_query) { { access_token: access_token } }
     let(:get_response_body) { {}.to_json }
@@ -217,7 +217,7 @@ RSpec.describe OffendersApi::Client do
     before do
       stub_post(authorization_uri)
         .with(headers: headers, query: authorization_query)
-        .to_return(body: successful_body, status: http_status)
+        .to_return(body: successful_body, status: authorization_http_status)
       stub_get(get_uri)
         .with(headers: headers, query: get_query)
         .to_return(body: get_response_body, status: get_response_status, headers: get_response_headers)
@@ -227,6 +227,26 @@ RSpec.describe OffendersApi::Client do
       it 'requests a new access token for the client' do
         client.get '/offenders/search'
         expect(a_post(authorization_uri).with(query: authorization_query)).to have_been_made
+      end
+
+      context 'but the authorization request fails' do
+        let(:authorization_http_status) { 401 }
+
+        before do
+          stub_post(authorization_uri)
+            .with(headers: headers, query: authorization_query)
+            .to_return(body: successful_body, status: authorization_http_status)
+        end
+
+        it 'does not request a new access token for the client' do
+          client.get '/offenders/search'
+          expect(a_post(authorization_uri).with(query: authorization_query)).to have_been_made
+        end
+
+        it 'does not perform the authenticated request' do
+          client.get '/offenders/search'
+          expect(a_get(get_uri).with(query: get_query)).not_to have_been_made
+        end
       end
 
       include_examples 'GET request'

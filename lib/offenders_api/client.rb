@@ -20,7 +20,11 @@ module OffendersApi
     end
 
     def get(path, options = {})
-      authorize unless valid_access_token?
+      if !valid_access_token?
+        authorization_response = authorize
+        return authorization_response unless authorization_response.code == 200
+      end
+
       uri = URI.new("#{base_url}/api/#{path}")
       get_options = { params: options.fetch(:params, {}).merge(access_options) }
       HTTP.accept(:json).get(uri.to_s, get_options)
